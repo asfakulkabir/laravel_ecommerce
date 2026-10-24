@@ -3,15 +3,11 @@
 @section('title', "{$product->name} - " . site_name())
 
 @section('pixel_events')
+@if(isset($pixelEventId, $pixelEventData))
 <script>
-fbq('track', 'ViewContent', {
-    content_ids: [{{ $product->id }}],
-    content_name: '{{ str_replace("'", "\\'", $product->name) }}',
-    content_type: 'product',
-    value: {{ $product->getDisplayPrice() ?: 0 }},
-    currency: 'BDT'
-});
+fbq('track', 'ViewContent', @json($pixelEventData), { eventID: @json($pixelEventId) });
 </script>
+@endif
 @endsection
 
 @section('content')

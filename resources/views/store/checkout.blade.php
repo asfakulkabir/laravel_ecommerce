@@ -3,19 +3,11 @@
 @section('title', 'চেকআউট - ' . site_name())
 
 @section('pixel_events')
+@if(isset($pixelEventId, $pixelEventData))
 <script>
-fbq('track', 'AddPaymentInfo', {
-    content_type: 'product',
-    value: {{ $subtotal }},
-    currency: 'BDT'
-});
-fbq('track', 'InitiateCheckout', {
-    content_type: 'product',
-    value: {{ $subtotal }},
-    currency: 'BDT',
-    num_items: {{ count($cart) }}
-});
+fbq('track', 'InitiateCheckout', @json($pixelEventData), { eventID: @json($pixelEventId) });
 </script>
+@endif
 @endsection
 
 @section('content')

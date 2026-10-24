@@ -15,6 +15,7 @@ use App\Services\MetaPixelService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class StoreController extends Controller
 {
@@ -86,16 +87,29 @@ class StoreController extends Controller
         $products = $query->paginate(12)->withQueryString();
         $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
 
-        // Send Search to Conversion API
+        $pixelSearchEventId = null;
+        $pixelSearchEventData = null;
+
         if ($request->filled('search')) {
-            app(MetaPixelService::class)->sendEvent('Search', [
+            $pixelSearchEventId = (string) Str::uuid();
+            $pixelSearchEventData = [
                 'search_string' => $request->input('search'),
                 'content_type' => 'product',
-                'currency' => 'BDT',
-            ]);
+            ];
+            app(MetaPixelService::class)->sendEvent(
+                'Search',
+                $pixelSearchEventData,
+                [],
+                $pixelSearchEventId
+            );
         }
 
-        return view('store.shop', compact('products', 'categories'));
+        return view('store.shop', compact(
+            'products',
+            'categories',
+            'pixelSearchEventId',
+            'pixelSearchEventData'
+        ));
     }
 
     public function product($slug)
@@ -128,16 +142,23 @@ class StoreController extends Controller
             });
         }
 
-        // Send ViewContent to Conversion API
-        app(MetaPixelService::class)->sendEvent('ViewContent', [
+        $pixelEventId = (string) Str::uuid();
+        $pixelEventData = [
             'content_ids' => [$product->id],
             'content_name' => $product->name,
             'content_type' => 'product',
             'value' => $product->getDisplayPrice() ?: 0,
             'currency' => 'BDT',
-        ]);
+        ];
+        app(MetaPixelService::class)->sendEvent('ViewContent', $pixelEventData, [], $pixelEventId);
 
-        return view('store.product', compact('product', 'relatedProducts', 'variationsJson'));
+        return view('store.product', compact(
+            'product',
+            'relatedProducts',
+            'variationsJson',
+            'pixelEventId',
+            'pixelEventData'
+        ));
     }
 
     public function cart()
@@ -207,19 +228,26 @@ class StoreController extends Controller
 
         session()->put('cart', $cart);
 
-        // Fire AddToCart Pixel and Conversion API
+        $pixelEventId = (string) Str::uuid();
         $pixelEvent = [
             'event' => 'AddToCart',
             'data' => [
                 'content_ids' => [$product->id],
                 'content_name' => $product->name,
                 'content_type' => 'product',
-                'value' => (float) $price,
+                'value' => (float) $price * $qty,
                 'currency' => 'BDT',
+                'contents' => [[
+                    'id' => (string) $product->id,
+                    'quantity' => $qty,
+                    'item_price' => (float) $price,
+                ]],
+                'num_items' => $qty,
             ],
+            'event_id' => $pixelEventId,
         ];
         session()->push('pixel_events', $pixelEvent);
-        app(MetaPixelService::class)->sendEvent('AddToCart', $pixelEvent['data']);
+        app(MetaPixelService::class)->sendEvent('AddToCart', $pixelEvent['data'], [], $pixelEventId);
 
         if ($request->input('buy_now') == '1') {
             return redirect()->route('checkout');
@@ -321,22 +349,31 @@ class StoreController extends Controller
         $subtotal = array_sum(array_map(fn($item) => $item['price'] * $item['quantity'], $cart));
         $deliveryZones = DeliveryCharge::orderBy('zone')->get();
 
-        // Send InitiateCheckout + AddPaymentInfo to Conversion API
-        $contentIds = array_values(array_map(fn($item) => $item['product_id'], $cart));
-        app(MetaPixelService::class)->sendEvent('AddPaymentInfo', [
+        $pixelEventId = (string) Str::uuid();
+        $pixelEventData = [
+            'content_ids' => array_values(array_map(
+                fn ($item) => (string) $item['product_id'],
+                $cart
+            )),
             'content_type' => 'product',
             'value' => (float) $subtotal,
             'currency' => 'BDT',
-        ]);
-        app(MetaPixelService::class)->sendEvent('InitiateCheckout', [
-            'content_ids' => array_values($contentIds),
-            'content_type' => 'product',
-            'value' => (float) $subtotal,
-            'currency' => 'BDT',
-            'num_items' => count($cart),
-        ]);
+            'contents' => array_values(array_map(fn ($item) => [
+                'id' => (string) $item['product_id'],
+                'quantity' => (int) $item['quantity'],
+                'item_price' => (float) $item['price'],
+            ], $cart)),
+            'num_items' => array_sum(array_column($cart, 'quantity')),
+        ];
+        app(MetaPixelService::class)->sendEvent('InitiateCheckout', $pixelEventData, [], $pixelEventId);
 
-        return view('store.checkout', compact('cart', 'deliveryZones', 'subtotal'));
+        return view('store.checkout', compact(
+            'cart',
+            'deliveryZones',
+            'subtotal',
+            'pixelEventId',
+            'pixelEventData'
+        ));
     }
 
     public function placeOrder(Request $request)
@@ -433,13 +470,24 @@ class StoreController extends Controller
 
             session()->forget('cart');
 
-            // Flash purchase pixel data (consumed once in orderSuccess)
-            $pixelContentIds = array_map(fn($item) => $item['product_id'], $cart);
+            $pixelEventId = (string) Str::uuid();
+            $pixelContentIds = array_map(fn ($item) => (string) $item['product_id'], $cart);
             session()->flash('pixel_purchase', [
-                'value' => (float) $totalAmount,
-                'currency' => 'BDT',
-                'content_ids' => array_values($pixelContentIds),
-                'content_type' => 'product',
+                'event_id' => $pixelEventId,
+                'order_id' => (string) $order->id,
+                'data' => [
+                    'value' => (float) $totalAmount,
+                    'currency' => 'BDT',
+                    'content_ids' => array_values($pixelContentIds),
+                    'content_type' => 'product',
+                    'contents' => array_values(array_map(fn ($item) => [
+                        'id' => (string) $item['product_id'],
+                        'quantity' => (int) $item['quantity'],
+                        'item_price' => (float) $item['price'],
+                    ], $cart)),
+                    'num_items' => array_sum(array_column($cart, 'quantity')),
+                    'order_id' => (string) $order->id,
+                ],
             ]);
 
             return redirect()->route('order.success', $order->id)
@@ -456,10 +504,21 @@ class StoreController extends Controller
         // Load the items relationship explicitly (not the attribute)
         $order->load('items');
 
-        // Send Purchase to Conversion API (one-time, never on refresh)
-        $purchaseData = session()->get('pixel_purchase', null);
-        if ($purchaseData) {
-            app(MetaPixelService::class)->sendEvent('Purchase', $purchaseData);
+        $pixelPurchase = session()->get('pixel_purchase');
+        if (
+            is_array($pixelPurchase)
+            && ($pixelPurchase['order_id'] ?? null) === (string) $order->id
+            && isset($pixelPurchase['event_id'], $pixelPurchase['data'])
+        ) {
+            app(MetaPixelService::class)->sendEvent(
+                'Purchase',
+                $pixelPurchase['data'],
+                [],
+                $pixelPurchase['event_id']
+            );
+            session()->forget('pixel_purchase');
+        } else {
+            $pixelPurchase = null;
         }
 
         if (!$order->is_notification_sent) {
@@ -490,7 +549,7 @@ class StoreController extends Controller
             }
         }
 
-        return view('store.order-success', compact('order'));
+        return view('store.order-success', compact('order', 'pixelPurchase'));
     }
 
     // Helpers

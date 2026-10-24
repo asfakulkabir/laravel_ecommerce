@@ -53,7 +53,7 @@ class SettingController extends Controller
             'site_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'primary_color' => ['nullable', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
             'order_notification_emails' => 'nullable|string|max:1000',
-            'meta_pixel_id' => 'nullable|string|max:100',
+            'meta_pixel_id' => ['nullable', 'regex:/^[0-9]+$/', 'max:30'],
             'meta_conversion_api_token' => 'nullable|string|max:255',
             'meta_test_event_code' => 'nullable|string|max:100',
             'whatsapp_number' => 'nullable|string|max:30',

@@ -3,10 +3,14 @@
 namespace App\Services;
 
 use App\Models\Setting;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class MetaPixelService
 {
+    private const GRAPH_API_VERSION = 'v26.0';
+
     protected string $pixelId;
     protected string $accessToken;
     protected ?string $testEventCode;
@@ -20,46 +24,71 @@ class MetaPixelService
 
     public function isEnabled(): bool
     {
-        return !empty($this->pixelId);
+        return ctype_digit($this->pixelId);
     }
 
     public function isConversionApiEnabled(): bool
     {
-        return !empty($this->pixelId) && !empty($this->accessToken);
+        return $this->isEnabled() && $this->accessToken !== '';
     }
 
-    public function sendEvent(string $eventName, array $customData = [], array $userData = []): void
+    public function sendEvent(
+        string $eventName,
+        array $customData = [],
+        array $userData = [],
+        ?string $eventId = null
+    ): void
     {
         if (!$this->isConversionApiEnabled()) {
             return;
         }
+
+        $request = request();
+        $userData = array_merge(array_filter([
+            'client_ip_address' => $request->ip(),
+            'client_user_agent' => $request->userAgent(),
+            'fbp' => $request->cookie('_fbp'),
+            'fbc' => $request->cookie('_fbc'),
+        ], fn ($value) => is_string($value) && $value !== ''), $userData);
 
         $payload = [
             'data' => [
                 [
                     'event_name' => $eventName,
                     'event_time' => time(),
-                    'event_source_url' => request()->url(),
+                    'event_source_url' => $request->url(),
                     'action_source' => 'website',
-                    'user_data' => array_merge([
-                        'client_ip_address' => request()->ip() ?? '127.0.0.1',
-                        'client_user_agent' => request()->userAgent() ?? 'Unknown',
-                    ], $userData),
+                    'user_data' => $userData,
                     'custom_data' => $customData,
                 ],
             ],
             'access_token' => $this->accessToken,
         ];
 
+        if ($eventId) {
+            $payload['data'][0]['event_id'] = $eventId;
+        }
+
         if ($this->testEventCode) {
             $payload['test_event_code'] = $this->testEventCode;
         }
 
         try {
-            Http::timeout(3)
-                ->post("https://graph.facebook.com/v18.0/{$this->pixelId}/events", $payload);
-        } catch (\Exception $e) {
-            \Log::error('Meta Conversion API Error: ' . $e->getMessage());
+            $response = Http::timeout(3)
+                ->post("https://graph.facebook.com/" . self::GRAPH_API_VERSION . "/{$this->pixelId}/events", $payload);
+
+            if (!$response->successful()) {
+                Log::warning('Meta Conversion API rejected an event.', [
+                    'event_name' => $eventName,
+                    'status' => $response->status(),
+                    'response' => $response->json(),
+                ]);
+            }
+        } catch (ConnectionException $exception) {
+            Log::warning('Meta Conversion API connection failed.', [
+                'event_name' => $eventName,
+                'message' => $exception->getMessage(),
+            ]);
         }
     }
 }

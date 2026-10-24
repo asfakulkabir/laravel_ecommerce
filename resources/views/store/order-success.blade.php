@@ -2,11 +2,12 @@
 
 @section('title', "Order Placed Successfully! #{{ $order->id }} - " . site_name())
 
-@php $pixelPurchase = session()->pull('pixel_purchase', null); @endphp
 @section('pixel_events')
 @if($pixelPurchase)
 <script>
-fbq('track', 'Purchase', @json($pixelPurchase));
+fbq('track', 'Purchase', @json($pixelPurchase['data']), {
+    eventID: @json($pixelPurchase['event_id'])
+});
 </script>
 @endif
 @endsection

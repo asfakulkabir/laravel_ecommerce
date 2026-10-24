@@ -3,13 +3,9 @@
 @section('title', 'Shop Catalog - ' . site_name())
 
 @section('pixel_events')
-@if(request()->filled('search'))
+@if($pixelSearchEventId && $pixelSearchEventData)
 <script>
-fbq('track', 'Search', {
-    search_string: '{{ str_replace("'", "\\'", request('search')) }}',
-    content_type: 'product',
-    currency: 'BDT'
-});
+fbq('track', 'Search', @json($pixelSearchEventData), { eventID: @json($pixelSearchEventId) });
 </script>
 @endif
 @endsection

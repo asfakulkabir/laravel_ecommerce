@@ -19,7 +19,9 @@
 
     @php
         $pixelId = \App\Models\Setting::getValue('meta_pixel_id', '');
-        $testCode = \App\Models\Setting::getValue('meta_test_event_code', '');
+        if (!ctype_digit((string) $pixelId)) {
+            $pixelId = '';
+        }
     @endphp
     @if($pixelId)
     <script>
@@ -31,7 +33,7 @@
     t.src=v;s=b.getElementsByTagName(e)[0];
     s.parentNode.insertBefore(t,s)}(window,document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '{{ $pixelId }}'@if($testCode), '{{ $testCode }}'@endif);
+    fbq('init', @json($pixelId));
     fbq('track', 'PageView');
     </script>
     <noscript><img height="1" width="1" style="display:none"
@@ -584,7 +586,11 @@
     {{-- Flash-based pixel events (AddToCart, Purchase, etc.) --}}
     @if(session()->has('pixel_events'))
         @foreach(session('pixel_events') as $event)
-        <script>fbq('track', '{{ $event['event'] }}', @json($event['data'] ?? []));</script>
+        <script>
+            fbq('track', @json($event['event']), @json($event['data'] ?? []), {
+                eventID: @json($event['event_id'] ?? null)
+            });
+        </script>
         @endforeach
         @php session()->forget('pixel_events') @endphp
     @endif
