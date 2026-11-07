@@ -61,8 +61,7 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Steadfast API credentials are not configured. Please add them in Settings.');
         }
 
-        $deliveryCharge = $order->deliveryCharge;
-        $chargeAmount = $deliveryCharge ? $deliveryCharge->charge : 0;
+        $chargeAmount = $order->actualShippingCharge();
 
         $response = $steadfast->createOrder([
             'invoice' => 'ORDER-' . $order->id,
@@ -70,7 +69,9 @@ class OrderController extends Controller
             'recipient_phone' => $order->customer_phone,
             'recipient_address' => $order->customer_address,
             'cod_amount' => $order->total_amount,
-            'note' => 'Delivery charge: ৳' . $chargeAmount,
+            'note' => $chargeAmount > 0
+                ? 'Delivery charge: ৳' . $chargeAmount
+                : 'Free delivery (ফ্রি ডেলিভারি)',
         ]);
 
         if (($response['status'] ?? 0) === 200) {

@@ -26,6 +26,7 @@ class SettingController extends Controller
         $twitterUrl = Setting::getValue('twitter_url', '');
         $steadfastApiKey = Setting::getValue('steadfast_api_key', '');
         $steadfastSecretKey = Setting::getValue('steadfast_secret_key', '');
+        $freeShippingThreshold = Setting::getValue('free_shipping_threshold', '');
         return view('admin.settings.edit', compact(
             'siteName',
             'siteDescription',
@@ -42,6 +43,7 @@ class SettingController extends Controller
             'twitterUrl',
             'steadfastApiKey',
             'steadfastSecretKey',
+            'freeShippingThreshold',
         ));
     }
 
@@ -63,6 +65,7 @@ class SettingController extends Controller
             'twitter_url' => 'nullable|url|max:500',
             'steadfast_api_key' => 'nullable|string|max:255',
             'steadfast_secret_key' => 'nullable|string|max:255',
+            'free_shipping_threshold' => 'nullable|numeric|min:0',
         ]);
 
         Setting::setValue('site_name', $request->input('site_name', 'Outfitt'));
@@ -89,6 +92,7 @@ class SettingController extends Controller
         Setting::setValue('twitter_url', $request->input('twitter_url', ''));
         Setting::setValue('steadfast_api_key', $request->input('steadfast_api_key', ''));
         Setting::setValue('steadfast_secret_key', $request->input('steadfast_secret_key', ''));
+        Setting::setValue('free_shipping_threshold', $request->input('free_shipping_threshold', ''));
 
         return redirect()->route('admin.settings.edit')->with('success', 'Settings updated successfully.');
     }

@@ -83,8 +83,9 @@ fbq('track', 'Purchase', @json($pixelPurchase['data']), {
             <div class="space-y-2 text-sm">
                 @php
                     $deliveryCharge = $order->deliveryCharge;
-                    $chargeAmount   = $deliveryCharge ? $deliveryCharge->charge : 0;
+                    $chargeAmount   = $order->actualShippingCharge();
                     $zoneName       = $deliveryCharge ? $deliveryCharge->zone   : 'N/A';
+                    $isFreeShipping = $chargeAmount <= 0;
                 @endphp
                 <div class="flex justify-between text-gray-450">
                     <span>Subtotal</span>
@@ -92,7 +93,9 @@ fbq('track', 'Purchase', @json($pixelPurchase['data']), {
                 </div>
                 <div class="flex justify-between text-gray-450">
                     <span>Delivery ({{ $zoneName }})</span>
-                    <span>৳{{ number_format($chargeAmount, 0) }}</span>
+                    <span class="{{ $isFreeShipping ? 'font-bold text-emerald-600' : '' }}">
+                        {{ $isFreeShipping ? 'ফ্রি ডেলিভারি 🎉' : '৳' . number_format($chargeAmount, 0) }}
+                    </span>
                 </div>
                 <div class="flex justify-between font-extrabold text-base text-gray-950 border-t border-gray-100 pt-3 mt-2">
                     <span>Total Amount (COD)</span>

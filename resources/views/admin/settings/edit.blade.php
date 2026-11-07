@@ -157,6 +157,34 @@
             </div>
         </div>
 
+        <!-- Free Shipping Settings -->
+        <div class="bg-gradient-to-br from-slate-900 to-emerald-950 border border-emerald-800/40 p-8 rounded-2xl shadow-lg">
+            <div class="flex items-center gap-3 mb-6 pb-4 border-b border-emerald-800/30">
+                <span class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                </span>
+                <div>
+                    <h3 class="font-bold text-white text-xl">Free Shipping Settings</h3>
+                    <p class="text-base text-emerald-300/70">Set the minimum order amount that unlocks free delivery (ফ্রি ডেলিভারি) site-wide.</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="free_shipping_threshold" class="block text-base font-bold uppercase tracking-wider text-emerald-300 mb-2">
+                        Free Shipping Above (৳)
+                    </label>
+                    <input type="number" step="0.01" min="0" id="free_shipping_threshold" name="free_shipping_threshold"
+                           value="{{ old('free_shipping_threshold', $freeShippingThreshold) }}"
+                           class="w-full bg-slate-800/60 border border-emerald-700/40 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600"
+                           placeholder="e.g. 1000">
+                    <p class="text-base text-emerald-300/50 mt-1">Orders of this amount or more get free delivery. Leave empty to disable free shipping.</p>
+                    @error('free_shipping_threshold')
+                        <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
+                    @enderror
+                </div>
+            </div>
+        </div>
+
         <!-- Social Media Links -->
         <div class="bg-gradient-to-br from-slate-900 to-rose-950 border border-rose-800/40 p-8 rounded-2xl shadow-lg">
             <div class="flex items-center gap-3 mb-6 pb-4 border-b border-rose-800/30">

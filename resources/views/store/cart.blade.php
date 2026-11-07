@@ -77,6 +77,21 @@
                             <span>Shipping</span>
                             <span>Calculated at checkout</span>
                         </div>
+                        @if(!empty($freeShippingMin))
+                            @php
+                                $cartSubtotal = array_sum(array_map(fn($item) => $item['price'] * $item['quantity'], $cart));
+                                $remainingForFree = max(0, (float) $freeShippingMin - $cartSubtotal);
+                            @endphp
+                            @if($remainingForFree > 0)
+                                <div class="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                    🎁 আরও <b>৳{{ number_format($remainingForFree, 0) }}</b> অর্ডার করলেই পাবেন <b class="text-emerald-700">ফ্রি ডেলিভারি</b>
+                                </div>
+                            @else
+                                <div class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                                    🎉 অভিনন্দন! আপনার অর্ডারে পাচ্ছেন <b>ফ্রি ডেলিভারি</b>
+                                </div>
+                            @endif
+                        @endif
                     </div>
 
                     <div class="border-t border-gray-100 pt-4 flex justify-between font-bold text-gray-950">
@@ -86,7 +101,7 @@
                         </span>
                     </div>
 
-                    <a href="{{ route('checkout') }}" class="block w-full text-center py-3 bg-primary hover:bg-primary text-white rounded-lg font-bold tracking-wide transition">
+                    <a href="{{ route('checkout') }}" class="block w-full text-center py-3 bg-primary hover:bg-primary-dark text-white rounded-lg font-bold tracking-wide transition shadow-sm">
                         Proceed to Checkout
                     </a>
                     

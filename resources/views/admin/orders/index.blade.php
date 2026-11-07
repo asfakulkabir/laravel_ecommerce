@@ -69,7 +69,7 @@
                 @forelse($orders as $order)
                     @php
                         $deliveryCharge = $order->deliveryCharge;
-                        $chargeAmount   = $deliveryCharge ? $deliveryCharge->charge : 0;
+                        $chargeAmount   = $order->actualShippingCharge();
                         $zoneName       = $deliveryCharge ? $deliveryCharge->zone   : 'N/A';
                     @endphp
                     <tbody x-data="{ open: false }" class="divide-y divide-slate-800/30 text-slate-400">
@@ -256,7 +256,9 @@
                                         </table>
                                         <div class="flex justify-end mt-2 text-sm">
                                             <span class="text-slate-400">Delivery ({{ $zoneName }}):</span>
-                                            <span class="font-semibold text-slate-200 ml-4">৳{{ number_format($chargeAmount, 0) }}</span>
+                                            <span class="font-semibold ml-4 {{ $chargeAmount <= 0 ? 'text-emerald-400' : 'text-slate-200' }}">
+                                                {{ $chargeAmount <= 0 ? 'ফ্রি ডেলিভারি 🎉' : '৳' . number_format($chargeAmount, 0) }}
+                                            </span>
                                         </div>
                                         <div class="flex justify-end mt-1 text-base font-bold text-white">
                                             <span>Grand Total:</span>

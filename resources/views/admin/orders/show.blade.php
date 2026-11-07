@@ -61,9 +61,10 @@
                 <!-- Total Summary -->
                 @php
                     $deliveryCharge = $order->deliveryCharge;
-                    $chargeAmount   = $deliveryCharge ? $deliveryCharge->charge : 0;
+                    $chargeAmount   = $order->actualShippingCharge();
                     $zoneName       = $deliveryCharge ? $deliveryCharge->zone   : 'N/A';
                     $subtotalCalc   = $order->total_amount - $chargeAmount;
+                    $isFreeShipping = $chargeAmount <= 0;
                 @endphp
                 <div class="p-8 bg-slate-800/50 border-t border-slate-800/50 space-y-3 text-sm flex flex-col items-end">
                     <div class="flex justify-between w-72">
@@ -72,7 +73,9 @@
                     </div>
                     <div class="flex justify-between w-72">
                         <span class="text-slate-300">Delivery ({{ $zoneName }}):</span>
-                        <span class="font-semibold text-slate-200">৳{{ number_format($chargeAmount, 0) }}</span>
+                        <span class="font-semibold {{ $isFreeShipping ? 'text-emerald-400' : 'text-slate-200' }}">
+                            {{ $isFreeShipping ? 'ফ্রি ডেলিভারি 🎉' : '৳' . number_format($chargeAmount, 0) }}
+                        </span>
                     </div>
                     <div class="flex justify-between w-72 border-t border-slate-700/50 pt-3 text-lg font-bold text-white">
                         <span>Grand Total:</span>

@@ -26,7 +26,15 @@ class StoreController extends Controller
         $latestProducts = Product::with(['images', 'categories'])->where('is_active', true)->orderBy('sort_order')->latest()->limit(8)->get();
         $sliders = Slider::active()->get();
 
-        return view('store.index', compact('featuredCategories', 'featuredProducts', 'latestProducts', 'sliders'));
+        $freeShippingThreshold = (float) Setting::getValue('free_shipping_threshold', 0);
+
+        return view('store.index', compact(
+            'featuredCategories',
+            'featuredProducts',
+            'latestProducts',
+            'sliders',
+            'freeShippingThreshold'
+        ));
     }
 
     public function shop(Request $request)
@@ -84,7 +92,7 @@ class StoreController extends Controller
             $query->orderBy('products.sort_order')->orderBy('products.created_at', 'desc');
         }
 
-        $products = $query->paginate(12)->withQueryString();
+        $products = $query->paginate(30)->withQueryString();
         $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
 
         $pixelSearchEventId = null;
@@ -124,7 +132,7 @@ class StoreController extends Controller
             ->whereHas('categories', function ($q) use ($categoryIds) {
                 $q->whereIn('categories.id', $categoryIds);
             })
-            ->limit(4)
+            ->limit(12)
             ->get();
 
         // Group variations for dropdown rendering if product is variable
@@ -152,10 +160,13 @@ class StoreController extends Controller
         ];
         app(MetaPixelService::class)->sendEvent('ViewContent', $pixelEventData, [], $pixelEventId);
 
+        $freeShippingThreshold = (float) Setting::getValue('free_shipping_threshold', 0);
+
         return view('store.product', compact(
             'product',
             'relatedProducts',
             'variationsJson',
+            'freeShippingThreshold',
             'pixelEventId',
             'pixelEventData'
         ));
@@ -164,7 +175,11 @@ class StoreController extends Controller
     public function cart()
     {
         $cart = session()->get('cart', []);
-        return view('store.cart', compact('cart'));
+
+        // Global free shipping threshold (separate field, not per-zone).
+        $freeShippingMin = (float) Setting::getValue('free_shipping_threshold', 0);
+
+        return view('store.cart', compact('cart', 'freeShippingMin'));
     }
 
     public function addToCart(Request $request)
@@ -188,7 +203,8 @@ class StoreController extends Controller
             if ($variation->stock < $qty) {
                 return back()->with('error', "Only {$variation->stock} items left in stock for this option.");
             }
-            $price = $variation->price ?: $product->regular_price;
+            // Respect the product sale price when the variation has no own price.
+            $price = $variation->price ?: $product->getDisplayPrice();
             $variationDetails = trim("{$variation->size} {$variation->color} {$variation->weight}");
             $cartKey = "product_{$product->id}_var_{$variationId}";
         } else {
@@ -349,6 +365,10 @@ class StoreController extends Controller
         $subtotal = array_sum(array_map(fn($item) => $item['price'] * $item['quantity'], $cart));
         $deliveryZones = DeliveryCharge::orderBy('zone')->get();
 
+        // Global free shipping threshold (separate field, not per-zone).
+        $freeShippingThreshold = (float) Setting::getValue('free_shipping_threshold', 0);
+        $qualifiesForFreeShipping = $freeShippingThreshold > 0 && $subtotal >= $freeShippingThreshold;
+
         $pixelEventId = (string) Str::uuid();
         $pixelEventData = [
             'content_ids' => array_values(array_map(
@@ -371,6 +391,8 @@ class StoreController extends Controller
             'cart',
             'deliveryZones',
             'subtotal',
+            'freeShippingThreshold',
+            'qualifiesForFreeShipping',
             'pixelEventId',
             'pixelEventData'
         ));
@@ -382,7 +404,6 @@ class StoreController extends Controller
             'customer_name'    => 'required|string|max:255',
             'customer_phone'   => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
             'customer_address' => 'required|string',
-            'delivery_zone'    => 'required|exists:delivery_charges,zone',
         ]);
 
         $cart = session()->get('cart', []);
@@ -390,14 +411,28 @@ class StoreController extends Controller
             return redirect()->route('cart')->with('error', 'Your cart is empty.');
         }
 
-        $delivery = DeliveryCharge::where('zone', $request->delivery_zone)->firstOrFail();
-
         $subtotal = 0;
         foreach ($cart as $item) {
             $subtotal += $item['price'] * $item['quantity'];
         }
 
-        $totalAmount = (int) round($subtotal + $delivery->charge);
+        // Global free shipping threshold (separate field, not per-zone).
+        $freeShippingThreshold = (float) Setting::getValue('free_shipping_threshold', 0);
+        $qualifiesForFreeShipping = $freeShippingThreshold > 0 && $subtotal >= $freeShippingThreshold;
+
+        $deliveryChargeId = null;
+        $shippingCharge = 0.0;
+
+        if (!$qualifiesForFreeShipping) {
+            $request->validate([
+                'delivery_zone' => 'required|exists:delivery_charges,zone',
+            ]);
+            $delivery = DeliveryCharge::where('zone', $request->delivery_zone)->firstOrFail();
+            $deliveryChargeId = $delivery->id;
+            $shippingCharge = (float) $delivery->charge;
+        }
+
+        $totalAmount = (int) round($subtotal + $shippingCharge);
 
         $itemsArray = [];
         foreach ($cart as $item) {
@@ -436,7 +471,8 @@ class StoreController extends Controller
                 'customer_name'       => $request->customer_name,
                 'customer_phone'      => $request->customer_phone,
                 'customer_address'    => $request->customer_address,
-                'delivery_charge_id'  => $delivery->id,
+                'delivery_charge_id'  => $deliveryChargeId,
+                'shipping_charge'     => $shippingCharge,
                 'total_amount'        => $totalAmount,
                 'total'               => $totalAmount,
                 'status'              => 'processing',

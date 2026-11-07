@@ -22,9 +22,9 @@ class DeliveryChargeController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'zone' => 'required|string|max:255|unique:delivery_charges,zone',
-            'charge' => 'required|numeric|min:0',
-            'estimated_days' => 'nullable|string|max:50',
+            'zone'             => 'required|string|max:255|unique:delivery_charges,zone',
+            'charge'           => 'required|numeric|min:0',
+            'estimated_days'   => 'nullable|string|max:50',
         ]);
 
         DeliveryCharge::create($request->only(['zone', 'charge', 'estimated_days']));
@@ -40,9 +40,9 @@ class DeliveryChargeController extends Controller
     public function update(Request $request, DeliveryCharge $deliveryCharge)
     {
         $request->validate([
-            'zone' => 'required|string|max:255|unique:delivery_charges,zone,' . $deliveryCharge->id,
-            'charge' => 'required|numeric|min:0',
-            'estimated_days' => 'nullable|string|max:50',
+            'zone'             => 'required|string|max:255|unique:delivery_charges,zone,' . $deliveryCharge->id,
+            'charge'           => 'required|numeric|min:0',
+            'estimated_days'   => 'nullable|string|max:50',
         ]);
 
         $deliveryCharge->update($request->only(['zone', 'charge', 'estimated_days']));

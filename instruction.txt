@@ -53,3 +53,5 @@
 --------------------------
     Visit your domain and check if the site runs.
     Admin panel: /admin
+
+admin@outfitt.com / adminpassword 

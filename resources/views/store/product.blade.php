@@ -226,6 +226,63 @@ fbq('track', 'ViewContent', @json($pixelEventData), { eventID: @json($pixelEvent
                 </div>
             </div>
 
+@if($freeShippingThreshold > 0)
+    <div class="max-w-2xl mx-auto mb-8 sm:mb-10 px-1">
+        <div class="relative overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-sm">
+
+            <div class="flex items-center gap-4 p-5 sm:p-6">
+
+                <!-- Delivery Icon -->
+                <div class="flex-shrink-0 flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-emerald-50 text-emerald-600">
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="w-8 h-8"
+                         fill="none"
+                         viewBox="0 0 24 24"
+                         stroke="currentColor"
+                         stroke-width="1.7">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M3 7h11v10H3zM14 10h4l3 3v4h-7z"/>
+                        <circle cx="7.5" cy="18" r="1.5"/>
+                        <circle cx="17.5" cy="18" r="1.5"/>
+                        <path stroke-linecap="round" d="M14 13h7"/>
+                    </svg>
+                </div>
+
+                <!-- Text -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 class="text-base sm:text-lg font-bold text-gray-900">
+                            ফ্রি ডেলিভারি!
+                        </h3>
+
+                        <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                            SPECIAL OFFER
+                        </span>
+                    </div>
+
+                    <p class="text-sm text-gray-500 leading-relaxed">
+                        ৳{{ number_format($freeShippingThreshold, 0) }} বা তার বেশি অর্ডারে
+                        <span class="font-semibold text-emerald-700">
+                            সারা দেশে ডেলিভারি চার্জ সম্পূর্ণ ফ্রি।
+                        </span>
+                    </p>
+                </div>
+
+                <!-- Free Badge -->
+                <div class="hidden sm:flex flex-shrink-0 flex-col items-center justify-center w-16 h-16 rounded-full border-2 border-dashed border-emerald-200 text-emerald-600">
+                    <span class="text-xl font-extrabold leading-none">৳0</span>
+                    <span class="text-[9px] font-bold mt-1">DELIVERY</span>
+                </div>
+
+            </div>
+
+            <!-- Bottom Accent -->
+            <div class="h-1 w-full bg-gradient-to-r from-emerald-300 via-emerald-500 to-teal-500"></div>
+
+        </div>
+    </div>
+@endif
+
         </div>
     </div>
 
@@ -241,7 +298,7 @@ fbq('track', 'ViewContent', @json($pixelEventData), { eventID: @json($pixelEvent
     @if($relatedProducts->count() > 0)
         <section class="mt-8 md:mt-16 border-t border-gray-200 pt-6 md:pt-12 space-y-4 md:space-y-6">
             <h2 class="text-lg md:text-2xl font-extrabold text-gray-900 text-center">আরও দেখুন</h2>
-            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-6">
                 @foreach($relatedProducts as $rel)
                     @include('store.partials.product-card', ['product' => $rel])
                 @endforeach

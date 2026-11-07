@@ -124,6 +124,19 @@
 </head>
 <body class="bg-gradient-to-br from-rose-50 via-gray-50 to-pink-100 text-gray-800 flex flex-col min-h-screen">
 
+    <!-- Free Shipping Top Banner -->
+    @php
+        $freeShippingMin = (float) \App\Models\Setting::getValue('free_shipping_threshold', 0);
+    @endphp
+    @if($freeShippingMin > 0)
+        <div class="bg-emerald-600 border-b border-emerald-400/30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-center gap-3 text-white font-semibold text-sm md:text-base">
+                <span>🆓</span>
+                <span>৳{{ number_format($freeShippingMin, 0) }}+ অর্ডারে সারা দেশে <span class="uppercase tracking-wide">ফ্রি ডেলিভারি</span></span>
+            </div>
+        </div>
+    @endif
+
     <!-- Header / Navbar -->
     <header x-data="{ menuOpen: false, openCat: null }" class="bg-white/95 backdrop-blur-md sticky top-0 z-40 border-b border-purple-500 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -447,7 +460,7 @@
                                 <p class="text-[10px] text-gray-400">Shipping and taxes calculated at checkout.</p>
 
                                 <div class="space-y-2">
-                                    <a href="{{ route('checkout') }}" class="block w-full text-center py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-primary hover:to-pink-600 text-white rounded-lg font-bold tracking-wide transition shadow-md">
+                                    <a href="{{ route('checkout') }}" class="block w-full text-center py-3 bg-primary hover:bg-primary-dark text-white rounded-lg font-bold tracking-wide transition shadow-sm">
                                         Checkout Now
                                     </a>
                                     <a href="{{ route('cart') }}" class="block w-full text-center py-2 text-xs font-bold text-purple-600 hover:text-primary uppercase tracking-wider">

@@ -11,7 +11,8 @@ fbq('track', 'InitiateCheckout', @json($pixelEventData), { eventID: @json($pixel
 @endsection
 
 @section('content')
-<div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4" x-data="checkoutPage({{ $deliveryZones }})">
+<div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4"
+     x-data="checkoutPage(@json($deliveryZones), {{ $qualifiesForFreeShipping ? 'true' : 'false' }}, {{ $freeShippingThreshold ?? 0 }})">
 
     <h1 class="text-xl font-extrabold text-gray-900 mb-3">🔒 চেকআউট</h1>
 
@@ -81,39 +82,66 @@ fbq('track', 'InitiateCheckout', @json($pixelEventData), { eventID: @json($pixel
                             @enderror
                         </div>
 
-                        <!-- Delivery Zone (radio buttons) -->
+                        <!-- Delivery Zone -->
                         <div>
                             <label class="block text-sm font-bold text-gray-600 mb-2">
                                 ডেলিভারি জোন <span class="text-pink-500">*</span>
                             </label>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                @foreach($deliveryZones as $zone)
-                                    <label class="relative flex items-start p-3 cursor-pointer rounded-lg border-2 transition-all"
-                                           :class="selectedZone === '{{ $zone->zone }}' ? 'border-purple-500 bg-purple-50' : 'border-gray-300 bg-white hover:border-purple-400 hover:bg-gray-50'">
-                                        <div class="flex items-center h-5">
-                                            <input type="radio" name="delivery_zone" value="{{ $zone->zone }}"
-                                                   @change="selectZone('{{ $zone->zone }}')"
-                                                   x-model="selectedZone"
-                                                   class="h-4 w-4 border-gray-400 text-purple-600 focus:ring-purple-500"
-                                                   {{ old('delivery_zone') === $zone->zone ? 'checked' : '' }}>
-                                        </div>
-                                        <div class="ml-2 flex-1">
-                                            <div class="flex justify-between items-center">
-                                                <span class="font-bold text-gray-900 text-sm">{{ $zone->zone }}</span>
-                                                <span class="font-bold text-primary text-sm">৳{{ number_format($zone->charge, 0) }}</span>
+
+                            @if($qualifiesForFreeShipping)
+                                <!-- Free Delivery — only option, auto-selected -->
+                                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                                    <input type="hidden" name="delivery_zone" value="">
+                                    <div class="flex items-center gap-3">
+                                        <input type="radio" name="delivery_zone" value="free" checked
+                                               class="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                                               disabled>
+                                        <div>
+                                            <div class="font-bold text-gray-900 text-sm">ফ্রি ডেলিভারি 🎉</div>
+                                            <div class="text-xs text-emerald-600">
+                                                ৳{{ number_format($freeShippingThreshold, 0) }}+ অর্ডারে বিনামূল্যে ডেলিভারি
                                             </div>
-                                            @if($zone->estimated_days)
-                                                <p class="text-xs text-gray-400">⏱ {{ $zone->estimated_days }}-এর মধ্যে ডেলিভারি</p>
-                                            @endif
                                         </div>
-                                    </label>
-                                @endforeach
-                            </div>
+                                    </div>
+                                </div>
+                            @else
+                                <!-- Paid shipping zones -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    @foreach($deliveryZones as $zone)
+                                        <label class="relative flex items-start p-3 cursor-pointer rounded-lg border-2 transition-all"
+                                               :class="selectedZone === '{{ $zone->zone }}' ? 'border-purple-500 bg-purple-50' : 'border-gray-300 bg-white hover:border-purple-400 hover:bg-gray-50'">
+                                            <div class="flex items-center h-5">
+                                                <input type="radio" name="delivery_zone" value="{{ $zone->zone }}"
+                                                       @change="selectZone('{{ $zone->zone }}')"
+                                                       x-model="selectedZone"
+                                                       class="h-4 w-4 border-gray-400 text-purple-600 focus:ring-purple-500"
+                                                       {{ old('delivery_zone') === $zone->zone ? 'checked' : '' }}>
+                                            </div>
+                                            <div class="ml-2 flex-1">
+                                                <div class="flex justify-between items-center">
+                                                    <span class="font-bold text-gray-900 text-sm">{{ $zone->zone }}</span>
+                                                    <span class="font-bold text-primary text-sm">৳{{ number_format($zone->charge, 0) }}</span>
+                                                </div>
+                                                @if($zone->estimated_days)
+                                                    <p class="text-xs text-gray-400">⏱ {{ $zone->estimated_days }}-এর মধ্যে ডেলিভারি</p>
+                                                @endif
+                                            </div>
+                                        </label>
+                                    @endforeach
+                                </div>
+
+                                @if($freeShippingThreshold > 0)
+                                    <div class="mt-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+                                        🎁 ৳{{ number_format($freeShippingThreshold, 0) }}+ অর্ডারে পাবেন <b>ফ্রি ডেলিভারি</b>
+                                    </div>
+                                @endif
+                            @endif
+
                             @error('delivery_zone')
                                 <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
                             @enderror
 
-                            <div x-show="selectedZoneDays" x-cloak
+                            <div x-show="selectedZoneDays && !qualifiesForFreeShipping" x-cloak
                                  class="mt-1.5 text-sm font-semibold text-primary bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-md">
                                 🚚 আনুমানিক ডেলিভারি: <span x-text="selectedZoneDays" class="font-bold"></span>
                             </div>
@@ -140,7 +168,7 @@ fbq('track', 'InitiateCheckout', @json($pixelEventData), { eventID: @json($pixel
             <!-- Right: Order Summary -->
             <aside class="space-y-3">
                 <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm space-y-3 sticky top-20">
-                    <h3 class="font-bold text-gray-900 text-base">🛒 অর্ডার সারসংক্ষেপ</h3>
+                    <h3 class="font-bold text-gray-900 text-base">🛒 অর্ডার সারাংশ</h3>
 
                     <!-- Cart Items -->
                     <div class="space-y-2">
@@ -167,7 +195,13 @@ fbq('track', 'InitiateCheckout', @json($pixelEventData), { eventID: @json($pixel
                         </div>
                         <div class="flex justify-between text-gray-500">
                             <span>ডেলিভারি চার্জ</span>
-                            <span class="font-semibold text-gray-900" x-text="formattedShippingCharge">জোন নির্বাচন করুন</span>
+                            <span class="font-semibold"
+                                  :class="isFreeShipping ? 'text-emerald-600' : 'text-gray-900'"
+                                  x-text="formattedShippingCharge">জোন নির্বাচন করুন</span>
+                        </div>
+                        <div class="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1.5"
+                             x-show="!qualifiesForFreeShipping && freeShippingRemaining > 0" x-cloak>
+                            🎁 আরও <span x-text="'৳' + Math.round(freeShippingRemaining)"></span> অর্ডার করলেই পাবেন <b>ফ্রি ডেলিভারি</b>
                         </div>
                     </div>
 
@@ -195,28 +229,49 @@ fbq('track', 'InitiateCheckout', @json($pixelEventData), { eventID: @json($pixel
 
 @section('scripts')
 <script>
-    function checkoutPage(zones) {
+    function checkoutPage(zones, qualifiesForFreeShipping, freeShippingThreshold) {
         const subtotal = {{ $subtotal ?? 0 }};
 
         const zoneMap = {};
         zones.forEach(z => {
-            zoneMap[z.zone] = { charge: parseFloat(z.charge), days: z.estimated_days };
+            zoneMap[z.zone] = { charge: parseFloat(z.charge), days: z.estimated_days || '' };
         });
 
         return {
             subtotal: subtotal,
-            shippingCharge: 0,
+            qualifiesForFreeShipping: qualifiesForFreeShipping,
+            freeShippingThreshold: parseFloat(freeShippingThreshold) || 0,
             selectedZoneDays: '',
-            selectedZone: '{{ old('delivery_zone') }}',
+            selectedZone: qualifiesForFreeShipping ? 'free' : '{{ old('delivery_zone') }}',
 
             init() {
-                if (this.selectedZone && zoneMap[this.selectedZone]) {
+                if (!qualifiesForFreeShipping && this.selectedZone && zoneMap[this.selectedZone]) {
                     this.selectZone(this.selectedZone);
                 }
             },
 
+            get selectedZoneData() {
+                return (this.selectedZone && zoneMap[this.selectedZone]) ? zoneMap[this.selectedZone] : null;
+            },
+
+            get isFreeShipping() {
+                return this.qualifiesForFreeShipping;
+            },
+
+            get shippingCharge() {
+                if (this.qualifiesForFreeShipping) return 0;
+                const zone = this.selectedZoneData;
+                return zone ? zone.charge : 0;
+            },
+
+            get freeShippingRemaining() {
+                if (this.qualifiesForFreeShipping) return 0;
+                return Math.max(0, this.freeShippingThreshold - this.subtotal);
+            },
+
             get formattedShippingCharge() {
-                if (this.shippingCharge === 0) return 'জোন নির্বাচন করুন';
+                if (this.qualifiesForFreeShipping) return 'ফ্রি ডেলিভারি 🎉';
+                if (!this.selectedZoneData) return 'জোন নির্বাচন করুন';
                 return '৳' + Math.round(this.shippingCharge);
             },
 
@@ -226,10 +281,10 @@ fbq('track', 'InitiateCheckout', @json($pixelEventData), { eventID: @json($pixel
 
             selectZone(zoneName) {
                 if (zoneName && zoneMap[zoneName]) {
-                    this.shippingCharge = zoneMap[zoneName].charge;
+                    this.selectedZone = zoneName;
                     this.selectedZoneDays = zoneMap[zoneName].days || '';
                 } else {
-                    this.shippingCharge = 0;
+                    this.selectedZone = '';
                     this.selectedZoneDays = '';
                 }
             }
