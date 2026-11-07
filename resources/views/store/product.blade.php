@@ -298,7 +298,7 @@ fbq('track', 'ViewContent', @json($pixelEventData), { eventID: @json($pixelEvent
     @if($relatedProducts->count() > 0)
         <section class="mt-8 md:mt-16 border-t border-gray-200 pt-6 md:pt-12 space-y-4 md:space-y-6">
             <h2 class="text-lg md:text-2xl font-extrabold text-gray-900 text-center">আরও দেখুন</h2>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-6">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-3 md:gap-6">
                 @foreach($relatedProducts as $rel)
                     @include('store.partials.product-card', ['product' => $rel])
                 @endforeach
